@@ -9,14 +9,14 @@ import (
 
 // Status prints the status of all migrations.
 func Status(db *sql.DB, dir string) error {
-	// collect all migrations
-	migrations, err := CollectMigrations(db, dir, minVersion, maxVersion)
-	if err != nil {
+	// must ensure that the version table exists if we're running on a pristine DB
+	if _, err := EnsureDBVersion(db); err != nil {
 		return err
 	}
 
-	// must ensure that the version table exists if we're running on a pristine DB
-	if _, err := EnsureDBVersion(db); err != nil {
+	// collect all migrations
+	migrations, err := CollectMigrations(db, dir, minVersion, maxVersion)
+	if err != nil {
 		return err
 	}
 
