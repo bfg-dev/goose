@@ -80,6 +80,10 @@ func Run(command string, db *sql.DB, dir, note string, forceHoles bool, args ...
 		if err := Version(db, dir); err != nil {
 			return err
 		}
+	case "upgrade":
+		if err := Upgrade(db, dir, note); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("%q: no such command", command)
 	}
