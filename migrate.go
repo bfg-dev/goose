@@ -212,7 +212,7 @@ func EnsureDBVersion(db *sql.DB) (int64, error) {
 
 	for rows.Next() {
 		var row MigrationRecord
-		if err = rows.Scan(&row.VersionID, &row.IsApplied); err != nil {
+		if err = rows.Scan(&row.VersionID, &row.FileName, &row.Note, &row.IsApplied); err != nil {
 			log.Fatal("error scanning rows:", err)
 		}
 
@@ -257,8 +257,9 @@ func createVersionTable(db *sql.DB) error {
 	}
 
 	version := 0
+	note := "Init"
 	applied := true
-	if _, err := txn.Exec(d.insertVersionSQL(), version, applied); err != nil {
+	if _, err := txn.Exec(d.insertVersionSQL(), version, nil, note, applied); err != nil {
 		txn.Rollback()
 		return err
 	}

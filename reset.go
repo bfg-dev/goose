@@ -6,7 +6,7 @@ import (
 )
 
 // Reset rolls back all migrations
-func Reset(db *sql.DB, dir string) error {
+func Reset(db *sql.DB, dir, note string) error {
 	migrations, err := CollectMigrations(dir, minVersion, maxVersion)
 	if err != nil {
 		return err
@@ -21,7 +21,7 @@ func Reset(db *sql.DB, dir string) error {
 		if !statuses[migration.Version] {
 			continue
 		}
-		if err = migration.Down(db); err != nil {
+		if err = migration.Down(db, note); err != nil {
 			return err
 		}
 	}

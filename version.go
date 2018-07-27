@@ -15,7 +15,7 @@ func Version(db *sql.DB, dir string) error {
 	return nil
 }
 
-var tableName = "goose_db_version"
+var tableName = "goose_db_version_v2"
 
 // TableName returns goose db version table name
 func TableName() string {

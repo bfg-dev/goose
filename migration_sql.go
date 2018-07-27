@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -137,8 +138,8 @@ func getSQLStatements(r io.Reader, direction bool) (stmts []string, tx bool) {
 //
 // All statements following an Up or Down directive are grouped together
 // until another direction directive is found.
-func runSQLMigration(db *sql.DB, scriptFile string, v int64, direction bool) error {
-	f, err := os.Open(scriptFile)
+func runSQLMigration(db *sql.DB, m *Migration, note string, direction bool) error {
+	f, err := os.Open(m.Source)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -160,7 +161,7 @@ func runSQLMigration(db *sql.DB, scriptFile string, v int64, direction bool) err
 				return err
 			}
 		}
-		if _, err := tx.Exec(GetDialect().insertVersionSQL(), v, direction); err != nil {
+		if _, err := tx.Exec(GetDialect().insertVersionSQL(), m.Version, filepath.Base(m.Source), note, direction); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -174,7 +175,7 @@ func runSQLMigration(db *sql.DB, scriptFile string, v int64, direction bool) err
 			return err
 		}
 	}
-	if _, err := db.Exec(GetDialect().insertVersionSQL(), v, direction); err != nil {
+	if _, err := db.Exec(GetDialect().insertVersionSQL(), m.Version, filepath.Base(m.Source), note, direction); err != nil {
 		return err
 	}
 

@@ -13,6 +13,8 @@ import (
 // MigrationRecord struct.
 type MigrationRecord struct {
 	VersionID int64
+	FileName  *string
+	Note      *string
 	TStamp    time.Time
 	IsApplied bool // was this a result of up() or down()
 }
@@ -33,8 +35,8 @@ func (m *Migration) String() string {
 }
 
 // Up runs an up migration.
-func (m *Migration) Up(db *sql.DB) error {
-	if err := m.run(db, true); err != nil {
+func (m *Migration) Up(db *sql.DB, note string) error {
+	if err := m.run(db, note, true); err != nil {
 		return err
 	}
 	log.Println("OK   ", filepath.Base(m.Source))
@@ -42,18 +44,18 @@ func (m *Migration) Up(db *sql.DB) error {
 }
 
 // Down runs a down migration.
-func (m *Migration) Down(db *sql.DB) error {
-	if err := m.run(db, false); err != nil {
+func (m *Migration) Down(db *sql.DB, note string) error {
+	if err := m.run(db, note, false); err != nil {
 		return err
 	}
 	log.Println("OK   ", filepath.Base(m.Source))
 	return nil
 }
 
-func (m *Migration) run(db *sql.DB, direction bool) error {
+func (m *Migration) run(db *sql.DB, note string, direction bool) error {
 	switch filepath.Ext(m.Source) {
 	case ".sql":
-		if err := runSQLMigration(db, m.Source, m.Version, direction); err != nil {
+		if err := runSQLMigration(db, m, note, direction); err != nil {
 			return fmt.Errorf("FAIL %v, quitting migration", err)
 		}
 
@@ -77,7 +79,7 @@ func (m *Migration) run(db *sql.DB, direction bool) error {
 				return err
 			}
 		}
-		if _, err := tx.Exec(GetDialect().insertVersionSQL(), m.Version, direction); err != nil {
+		if _, err := tx.Exec(GetDialect().insertVersionSQL(), m.Version, filepath.Base(m.Source), note, direction); err != nil {
 			tx.Rollback()
 			return err
 		}
