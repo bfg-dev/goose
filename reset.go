@@ -7,7 +7,7 @@ import (
 
 // Reset rolls back all migrations
 func Reset(db *sql.DB, dir, note string) error {
-	migrations, err := CollectMigrations(dir, minVersion, maxVersion)
+	migrations, err := CollectMigrations(db, dir, minVersion, maxVersion)
 	if err != nil {
 		return err
 	}

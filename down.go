@@ -12,7 +12,7 @@ func Down(db *sql.DB, dir, note string) error {
 		return err
 	}
 
-	migrations, err := CollectMigrations(dir, minVersion, maxVersion)
+	migrations, err := CollectMigrations(db, dir, minVersion, maxVersion)
 	if err != nil {
 		return err
 	}
@@ -27,7 +27,7 @@ func Down(db *sql.DB, dir, note string) error {
 
 // DownTo rolls back migrations to a specific version.
 func DownTo(db *sql.DB, dir, note string, version int64) error {
-	migrations, err := CollectMigrations(dir, minVersion, maxVersion)
+	migrations, err := CollectMigrations(db, dir, minVersion, maxVersion)
 	if err != nil {
 		return err
 	}

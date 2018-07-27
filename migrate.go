@@ -15,6 +15,8 @@ var (
 	ErrNoCurrentVersion = errors.New("no current version found")
 	// ErrNoNextVersion when the next migration version is not found.
 	ErrNoNextVersion = errors.New("no next version found")
+	// ErrNoPendingVersion when the pending migration version is not found.
+	ErrNoPendingVersion = errors.New("no pending version found")
 	// MaxVersion is the maximum allowed version.
 	MaxVersion int64 = 9223372036854775807 // max(int64)
 
@@ -48,7 +50,7 @@ func (ms Migrations) Current(current int64) (*Migration, error) {
 // Next gets the next migration.
 func (ms Migrations) Next(current int64) (*Migration, error) {
 	for i, migration := range ms {
-		if migration.Version > current {
+		if migration.Version > current && !migration.IsApplied {
 			return ms[i], nil
 		}
 	}
@@ -74,6 +76,17 @@ func (ms Migrations) Last() (*Migration, error) {
 	}
 
 	return ms[len(ms)-1], nil
+}
+
+// FirstPending finds first unapplied
+func (ms Migrations) FirstPending() (*Migration, error) {
+	for i, migration := range ms {
+		if !migration.IsApplied {
+			return ms[i], nil
+		}
+	}
+
+	return nil, ErrNoPendingVersion
 }
 
 func (ms Migrations) String() string {
@@ -104,7 +117,7 @@ func AddNamedMigration(filename string, up func(*sql.Tx) error, down func(*sql.T
 
 // CollectMigrations returns all the valid looking migration scripts in the
 // migrations folder and go func registry, and key them by version.
-func CollectMigrations(dirpath string, current, target int64) (Migrations, error) {
+func CollectMigrations(db *sql.DB, dirpath string, current, target int64) (Migrations, error) {
 	if _, err := os.Stat(dirpath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("%s directory does not exists", dirpath)
 	}
@@ -160,7 +173,7 @@ func CollectMigrations(dirpath string, current, target int64) (Migrations, error
 		}
 	}
 
-	migrations = sortAndConnectMigrations(migrations)
+	migrations = addInfoFromDBToMigrations(db, sortAndConnectMigrations(migrations))
 
 	return migrations, nil
 }
@@ -177,6 +190,34 @@ func sortAndConnectMigrations(migrations Migrations) Migrations {
 			migrations[i-1].Next = m.Version
 		}
 		migrations[i].Previous = prev
+	}
+
+	return migrations
+}
+
+func addInfoFromDBToMigrations(db *sql.DB, migrations Migrations) Migrations {
+	rows, err := db.Query(fmt.Sprintf("SELECT version_id, note, filename, is_applied FROM %s ORDER by version_id, id;", TableName()))
+	if err != nil {
+		log.Fatal("error selecting from DB:", err)
+	}
+	defer rows.Close()
+
+	var (
+		row         MigrationRecord
+		searchIndex int64
+	)
+	for rows.Next() {
+		if err = rows.Scan(&row.VersionID, &row.FileName, &row.Note, &row.IsApplied); err != nil {
+			log.Fatal("error scanning rows:", err)
+		}
+
+		for row.VersionID > migrations[searchIndex].Version && searchIndex < int64(len(migrations)) {
+			searchIndex++
+		}
+
+		if row.VersionID == migrations[searchIndex].Version {
+			migrations[searchIndex].IsApplied = row.IsApplied
+		}
 	}
 
 	return migrations

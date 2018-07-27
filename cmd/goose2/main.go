@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	flags = flag.NewFlagSet("goose", flag.ExitOnError)
-	dir   = flags.String("dir", ".", "directory with migration files")
-	note  = flags.String("note", "", "custom note for migrations")
+	flags      = flag.NewFlagSet("goose", flag.ExitOnError)
+	dir        = flags.String("dir", ".", "directory with migration files")
+	note       = flags.String("note", "", "custom note for migrations")
+	forceHoles = flags.Bool("force-holes", false, "Force appling pending migraions")
 )
 
 func main() {
@@ -28,7 +29,7 @@ func main() {
 	args := flags.Args()
 
 	if len(args) > 1 && args[0] == "create" {
-		if err := goose.Run("create", nil, *dir, *note, args[1:]...); err != nil {
+		if err := goose.Run("create", nil, *dir, *note, *forceHoles, args[1:]...); err != nil {
 			log.Fatalf("goose run: %v", err)
 		}
 		return
@@ -73,7 +74,7 @@ func main() {
 		arguments = append(arguments, args[3:]...)
 	}
 
-	if err := goose.Run(command, db, *dir, *note, arguments...); err != nil {
+	if err := goose.Run(command, db, *dir, *note, *forceHoles, arguments...); err != nil {
 		log.Fatalf("goose run: %v", err)
 	}
 }

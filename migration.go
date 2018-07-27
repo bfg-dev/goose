@@ -26,6 +26,7 @@ type Migration struct {
 	Previous   int64  // previous version, -1 if none
 	Source     string // path to .sql script
 	Registered bool
+	IsApplied  bool
 	UpFn       func(*sql.Tx) error // Up go migration function
 	DownFn     func(*sql.Tx) error // Down go migration function
 }
@@ -40,6 +41,7 @@ func (m *Migration) Up(db *sql.DB, note string) error {
 		return err
 	}
 	log.Println("OK   ", filepath.Base(m.Source))
+	m.IsApplied = true
 	return nil
 }
 
@@ -49,6 +51,7 @@ func (m *Migration) Down(db *sql.DB, note string) error {
 		return err
 	}
 	log.Println("OK   ", filepath.Base(m.Source))
+	m.IsApplied = false
 	return nil
 }
 

@@ -5,8 +5,13 @@ import (
 )
 
 // UpTo migrates up to a specific version.
-func UpTo(db *sql.DB, dir, note string, version int64) error {
-	migrations, err := CollectMigrations(dir, minVersion, version)
+func UpTo(db *sql.DB, dir, note string, version int64, forceHoles bool) error {
+	var next *Migration
+
+	// Just create table if it does not exist
+	_, err := GetDBVersion(db)
+
+	migrations, err := CollectMigrations(db, dir, minVersion, version)
 	if err != nil {
 		return err
 	}
@@ -17,14 +22,27 @@ func UpTo(db *sql.DB, dir, note string, version int64) error {
 			return err
 		}
 
-		next, err := migrations.Next(current)
-		if err != nil {
-			if err == ErrNoNextVersion {
-				log.Printf("goose: no migrations to run. current version: %d\n", current)
-				return nil
+		if forceHoles {
+			next, err = migrations.FirstPending()
+			if err != nil {
+				if err == ErrNoPendingVersion {
+					log.Printf("goose: no migrations to run. current version: %d\n", current)
+					return nil
+				}
+				return err
 			}
-			return err
+		} else {
+			next, err = migrations.Next(current)
+			if err != nil {
+				if err == ErrNoNextVersion {
+					log.Printf("goose: no migrations to run. current version: %d\n", current)
+					return nil
+				}
+				return err
+			}
 		}
+
+		//log.Print(next.Source)
 
 		if err = next.Up(db, note); err != nil {
 			return err
@@ -33,18 +51,18 @@ func UpTo(db *sql.DB, dir, note string, version int64) error {
 }
 
 // Up applies all available migrations.
-func Up(db *sql.DB, dir, note string) error {
-	return UpTo(db, dir, note, maxVersion)
+func Up(db *sql.DB, dir, note string, forceHoles bool) error {
+	return UpTo(db, dir, note, maxVersion, forceHoles)
 }
 
 // UpByOne migrates up by a single version.
 func UpByOne(db *sql.DB, dir, note string) error {
-	migrations, err := CollectMigrations(dir, minVersion, maxVersion)
+	currentVersion, err := GetDBVersion(db)
 	if err != nil {
 		return err
 	}
 
-	currentVersion, err := GetDBVersion(db)
+	migrations, err := CollectMigrations(db, dir, minVersion, maxVersion)
 	if err != nil {
 		return err
 	}
