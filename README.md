@@ -2,35 +2,17 @@
 
 Goose is a database migration tool. Manage your database schema by creating incremental SQL changes or Go functions.
 
-[![GoDoc Widget]][GoDoc] [![Travis Widget]][Travis]
-
 ### Goals of this fork
 
-`github.com/pressly/goose` is a fork of `bitbucket.org/liamstask/goose` with the following changes:
-- No config files
-- [Default goose binary](./cmd/goose/main.go) can migrate SQL files only
-- Go migrations:
-    - We don't `go build` Go migrations functions on-the-fly
-      from within the goose binary
-    - Instead, we let you
-      [create your own custom goose binary](examples/go-migrations),
-      register your Go migration functions explicitly and run complex
-      migrations with your own `*sql.DB` connection
-    - Go migration functions let you run your code within
-      an SQL transaction, if you use the `*sql.Tx` argument
-- The goose pkg is decoupled from the binary:
-    - goose pkg doesn't register any SQL drivers anymore,
-      thus no driver `panic()` conflict within your codebase!
-    - goose pkg doesn't have any vendor dependencies anymore
-- We encourage using sequential versioning of migration files
-    (rather than timestamps-based versioning) to prevent version
-    mismatch and migration colissions
+`github.com/bfg-dev/goose` is a fork of `github.com/pressly/goose` with the following changes:
+- Added fields "filename" and "note" in migration table
+- Added ability to apply "holes" (pending migrations)
 
 # Install
 
-    $ go get -u github.com/pressly/goose/cmd/goose
+    $ go get -u github.com/bfg-dev/goose/cmd/goose2
 
-This will install the `goose` binary to your `$GOPATH/bin` directory.
+This will install the `goose2` binary to your `$GOPATH/bin` directory.
 
 # Usage
 
@@ -56,6 +38,10 @@ Commands:
 Options:
     -dir string
         directory with migration files (default ".")
+    -force-holes
+        Force appling pending migraions
+    -note string
+        custom note for migrations
 
 Examples:
     goose sqlite3 ./foo.db status
@@ -131,11 +117,11 @@ Print the status of all migrations:
 
     $ goose status
     $ goose: status for environment 'development'
-    $   Applied At                  Migration
-    $   =======================================
-    $   Sun Jan  6 11:25:03 2013 -- 001_basics.sql
-    $   Sun Jan  6 11:25:03 2013 -- 002_next.sql
-    $   Pending                  -- 003_and_again.go
+    $   Applied At                  Migration                (Note)
+    $   ===========================================================
+    $   Sun Jan  6 11:25:03 2013 -- 001_basics.sql (First migration)
+    $   Sun Jan  6 11:25:03 2013 -- 002_next.sql (Added some tables)
+    $   Pending                  -- 003_and_again.go (Cool!)
 
 Note: for MySQL [parseTime flag](https://github.com/go-sql-driver/mysql#parsetime) must be enabled.
 
@@ -244,8 +230,3 @@ func Down(tx *sql.Tx) error {
 ## License
 
 Licensed under [MIT License](./LICENSE)
-
-[GoDoc]: https://godoc.org/github.com/pressly/goose
-[GoDoc Widget]: https://godoc.org/github.com/pressly/goose?status.svg
-[Travis]: https://travis-ci.org/pressly/goose
-[Travis Widget]: https://travis-ci.org/pressly/goose.svg?branch=master

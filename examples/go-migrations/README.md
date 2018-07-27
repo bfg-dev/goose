@@ -19,10 +19,10 @@ OK    00002_rename_root.go
 goose: no migrations to run. current version: 2
 
 $
-    Applied At                  Migration
-    =======================================
-    Mon Jun 19 21:56:00 2017 -- 00001_create_users_table.sql
-    Mon Jun 19 21:56:00 2017 -- 00002_rename_root.go
+    Applied At                  Migration                (Note)
+    ===========================================================
+    Mon Jun 19 21:56:00 2017 -- 00001_create_users_table.sql (Some info)
+    Mon Jun 19 21:56:00 2017 -- 00002_rename_root.go (-)
 ```
 
 ## Best practice: Split migrations into a standalone package

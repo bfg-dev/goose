@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/pressly/goose"
+	"github.com/bfg-dev/goose"
 
 	// Init DB drivers.
 	_ "github.com/go-sql-driver/mysql"
@@ -16,8 +16,10 @@ import (
 )
 
 var (
-	flags = flag.NewFlagSet("goose", flag.ExitOnError)
-	dir   = flags.String("dir", ".", "directory with migration files")
+	flags      = flag.NewFlagSet("goose", flag.ExitOnError)
+	dir        = flags.String("dir", ".", "directory with migration files")
+	note       = flags.String("note", "", "custom note for migrations")
+	forceHoles = flags.Bool("force-holes", false, "Force appling pending migraions")
 )
 
 func main() {
@@ -27,7 +29,7 @@ func main() {
 	args := flags.Args()
 
 	if len(args) > 1 && args[0] == "create" {
-		if err := goose.Run("create", nil, *dir, args[1:]...); err != nil {
+		if err := goose.Run("create", nil, *dir, *note, *forceHoles, args[1:]...); err != nil {
 			log.Fatalf("goose run: %v", err)
 		}
 		return
@@ -45,23 +47,21 @@ func main() {
 
 	driver, dbstring, command := args[0], args[1], args[2]
 
+	if err := goose.SetDialect(driver); err != nil {
+		log.Fatal(err)
+	}
+
 	switch driver {
-	case "postgres", "mysql", "sqlite3", "redshift":
-		if err := goose.SetDialect(driver); err != nil {
-			log.Fatal(err)
-		}
-	default:
-		log.Fatalf("%q driver not supported\n", driver)
+	case "redshift":
+		driver = "postgres"
+	case "tidb":
+		driver = "mysql"
 	}
 
 	switch dbstring {
 	case "":
 		log.Fatalf("-dbstring=%q not supported\n", dbstring)
 	default:
-	}
-
-	if driver == "redshift" {
-		driver = "postgres"
 	}
 
 	db, err := sql.Open(driver, dbstring)
@@ -74,7 +74,7 @@ func main() {
 		arguments = append(arguments, args[3:]...)
 	}
 
-	if err := goose.Run(command, db, *dir, arguments...); err != nil {
+	if err := goose.Run(command, db, *dir, *note, *forceHoles, arguments...); err != nil {
 		log.Fatalf("goose run: %v", err)
 	}
 }
@@ -104,6 +104,7 @@ Examples:
     goose postgres "user=postgres dbname=postgres sslmode=disable" status
     goose mysql "user:password@/dbname?parseTime=true" status
     goose redshift "postgres://user:password@qwerty.us-east-1.redshift.amazonaws.com:5439/db" status
+    goose tidb "user:password@/dbname?parseTime=true" status
 
 Options:
 `
@@ -115,6 +116,7 @@ Commands:
     down                 Roll back the version by 1
     down-to VERSION      Roll back to a specific VERSION
     redo                 Re-run the latest migration
+    reset                Roll back all migrations
     status               Dump the migration status for the current DB
     version              Print the current version of the database
     create NAME [sql|go] Creates new migration file with next version
