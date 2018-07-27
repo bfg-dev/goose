@@ -211,7 +211,7 @@ func addInfoFromDBToMigrations(db *sql.DB, migrations Migrations) Migrations {
 			log.Fatal("error scanning rows:", err)
 		}
 
-		for row.VersionID > migrations[searchIndex].Version && searchIndex < int64(len(migrations)) {
+		for row.VersionID > migrations[searchIndex].Version && searchIndex < int64(len(migrations)-1) {
 			searchIndex++
 		}
 

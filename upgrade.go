@@ -13,9 +13,15 @@ func Upgrade(db *sql.DB, dir, note string) error {
 		searchIndex int64
 	)
 
-	if _, err := EnsureDBVersion(db); err != nil {
-		return err
+	rows, err := GetDialect().dbVersionQuery(db)
+	if err != nil {
+		if err := createVersionTable(db); err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("table %s already exists", TableName())
 	}
+	rows.Close()
 
 	// collect all migrations
 	migrations, err := CollectMigrations(db, dir, minVersion, maxVersion)
@@ -23,7 +29,7 @@ func Upgrade(db *sql.DB, dir, note string) error {
 		return err
 	}
 
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied, tstamp FROM %s;", TableOldName()))
+	rows, err = db.Query(fmt.Sprintf("SELECT version_id, is_applied, tstamp FROM %s;", TableOldName()))
 	if err != nil {
 		return err
 	}
@@ -34,13 +40,13 @@ func Upgrade(db *sql.DB, dir, note string) error {
 			return err
 		}
 
-		for row.VersionID > migrations[searchIndex].Version && searchIndex < int64(len(migrations)) {
+		for row.VersionID > migrations[searchIndex].Version && searchIndex < int64(len(migrations)-1) {
 			searchIndex++
 		}
 
 		if row.VersionID == migrations[searchIndex].Version {
 			m := migrations[searchIndex]
-			if _, err := db.Exec(GetDialect().insertVersionSQL(), m.Version, filepath.Base(m.Source), note, m.IsApplied); err != nil {
+			if _, err := db.Exec(GetDialect().insertVersionSQL(), row.VersionID, filepath.Base(m.Source), note, row.IsApplied); err != nil {
 				return err
 			}
 		}
