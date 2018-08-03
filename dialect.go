@@ -60,11 +60,14 @@ func (pg PostgresDialect) createVersionTableSQL() string {
 }
 
 func (pg PostgresDialect) insertVersionSQL() string {
-	return fmt.Sprintf("INSERT INTO %s (version_id, filename, note, is_applied) VALUES ($1, $2, $3, $4);", TableName())
+	return fmt.Sprintf(`INSERT INTO %s 
+											(version_id, filename, note, is_applied) 
+											VALUES ($1, $2, $3, $4);`, TableName())
 }
 
 func (pg PostgresDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, filename, note, is_applied from %s ORDER BY id DESC", TableName()))
+	rows, err := db.Query(fmt.Sprintf(`SELECT version_id, filename, note, is_applied 
+																			FROM %s ORDER BY version_id DESC, id DESC`, TableName()))
 	if err != nil {
 		return nil, err
 	}
@@ -92,11 +95,14 @@ func (m MySQLDialect) createVersionTableSQL() string {
 }
 
 func (m MySQLDialect) insertVersionSQL() string {
-	return fmt.Sprintf("INSERT INTO %s (version_id, filename, note, is_applied) VALUES (?, ?, ?, ?);", TableName())
+	return fmt.Sprintf(`INSERT INTO %s 
+											(version_id, filename, note, is_applied) 
+											VALUES (?, ?, ?, ?);`, TableName())
 }
 
 func (m MySQLDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, filename, note, is_applied from %s ORDER BY id DESC", TableName()))
+	rows, err := db.Query(fmt.Sprintf(`SELECT version_id, filename, note, is_applied 
+																			FROM %s ORDER BY version_id DESC, id DESC`, TableName()))
 	if err != nil {
 		return nil, err
 	}
@@ -123,11 +129,14 @@ func (m Sqlite3Dialect) createVersionTableSQL() string {
 }
 
 func (m Sqlite3Dialect) insertVersionSQL() string {
-	return fmt.Sprintf("INSERT INTO %s (version_id, filename, note is_applied) VALUES (?, ?, ?, ?);", TableName())
+	return fmt.Sprintf(`INSERT INTO %s 
+											(version_id, filename, note is_applied) 
+											VALUES (?, ?, ?, ?);`, TableName())
 }
 
 func (m Sqlite3Dialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, filename, note, is_applied from %s ORDER BY id DESC", TableName()))
+	rows, err := db.Query(fmt.Sprintf(`SELECT version_id, filename, note, is_applied 
+																			FROM %s ORDER BY version_id DESC, id DESC`, TableName()))
 	if err != nil {
 		return nil, err
 	}
@@ -155,11 +164,14 @@ func (rs RedshiftDialect) createVersionTableSQL() string {
 }
 
 func (rs RedshiftDialect) insertVersionSQL() string {
-	return fmt.Sprintf("INSERT INTO %s (version_id, filename, note, is_applied) VALUES ($1, $2, $3, $4);", TableName())
+	return fmt.Sprintf(`INSERT INTO %s 
+											(version_id, filename, note, is_applied) 
+											VALUES ($1, $2, $3, $4);`, TableName())
 }
 
 func (rs RedshiftDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, filename, note, is_applied from %s ORDER BY id DESC", TableName()))
+	rows, err := db.Query(fmt.Sprintf(`SELECT version_id, filename, note, is_applied 
+																			FROM %s ORDER BY version_id DESC, id DESC`, TableName()))
 	if err != nil {
 		return nil, err
 	}
@@ -187,11 +199,14 @@ func (m TiDBDialect) createVersionTableSQL() string {
 }
 
 func (m TiDBDialect) insertVersionSQL() string {
-	return fmt.Sprintf("INSERT INTO %s (version_id, filename, note, is_applied) VALUES (?, ?, ?, ?);", TableName())
+	return fmt.Sprintf(`INSERT INTO %s 
+											(version_id, filename, note, is_applied) 
+											VALUES (?, ?, ?, ?);`, TableName())
 }
 
 func (m TiDBDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, filename, note, is_applied from %s ORDER BY id DESC", TableName()))
+	rows, err := db.Query(fmt.Sprintf(`SELECT version_id, filename, note, is_applied 
+																			FROM %s ORDER BY version_id DESC, id DESC`, TableName()))
 	if err != nil {
 		return nil, err
 	}
