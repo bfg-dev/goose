@@ -17,6 +17,7 @@ type MigrationRecord struct {
 	Note      *string
 	TStamp    time.Time
 	IsApplied bool // was this a result of up() or down()
+	SQLData   *string
 }
 
 // Migration struct.
@@ -25,8 +26,11 @@ type Migration struct {
 	Next       int64  // next version, or -1 if none
 	Previous   int64  // previous version, -1 if none
 	Source     string // path to .sql script
+	Note       *string
 	Registered bool
 	IsApplied  bool
+	SQLData    *string
+	TStamp     time.Time
 	UpFn       func(*sql.Tx) error // Up go migration function
 	DownFn     func(*sql.Tx) error // Down go migration function
 }
@@ -82,7 +86,7 @@ func (m *Migration) run(db *sql.DB, note string, direction bool) error {
 				return err
 			}
 		}
-		if _, err := tx.Exec(GetDialect().insertVersionSQL(), m.Version, filepath.Base(m.Source), note, direction); err != nil {
+		if _, err := tx.Exec(GetDialect().insertVersionSQL(), m.Version, filepath.Base(m.Source), note, direction, nil); err != nil {
 			tx.Rollback()
 			return err
 		}

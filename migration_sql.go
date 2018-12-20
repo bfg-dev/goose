@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"database/sql"
 	"io"
-	"os"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 )
@@ -139,13 +139,34 @@ func getSQLStatements(r io.Reader, direction bool) (stmts []string, tx bool) {
 // All statements following an Up or Down directive are grouped together
 // until another direction directive is found.
 func runSQLMigration(db *sql.DB, m *Migration, note string, direction bool) error {
-	f, err := os.Open(m.Source)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
+	var (
+		sqlreader     io.ReadSeeker
+		sqlbytedata   []byte
+		sqlstringdata string
+	)
 
-	statements, useTx := getSQLStatements(f, direction)
+	sqlbytedata, err := ioutil.ReadFile(m.Source)
+	if err != nil {
+		// Can not do UP without sql file
+		if direction {
+			log.Fatal(err)
+		}
+
+		// Can not do DOWN without sql file or sql data in table
+		if m.SQLData == nil {
+			log.Fatal("No sql data in table and file error: ", err)
+		}
+
+		sqlreader = strings.NewReader(*m.SQLData)
+	} else {
+		sqlreader = bytes.NewReader(sqlbytedata)
+	}
+
+	statements, useTx := getSQLStatements(sqlreader, direction)
+	sqlreader.Seek(0, 0)
+	sqlbytedata, _ = ioutil.ReadAll(sqlreader)
+	sqlstringdata = string(sqlbytedata)
+	m.SQLData = &sqlstringdata
 
 	if useTx {
 		// TRANSACTION.
@@ -161,7 +182,8 @@ func runSQLMigration(db *sql.DB, m *Migration, note string, direction bool) erro
 				return err
 			}
 		}
-		if _, err := tx.Exec(GetDialect().insertVersionSQL(), m.Version, filepath.Base(m.Source), note, direction); err != nil {
+
+		if _, err := tx.Exec(GetDialect().insertVersionSQL(), m.Version, filepath.Base(m.Source), note, direction, *m.SQLData); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -175,7 +197,7 @@ func runSQLMigration(db *sql.DB, m *Migration, note string, direction bool) erro
 			return err
 		}
 	}
-	if _, err := db.Exec(GetDialect().insertVersionSQL(), m.Version, filepath.Base(m.Source), note, direction); err != nil {
+	if _, err := db.Exec(GetDialect().insertVersionSQL(), m.Version, filepath.Base(m.Source), note, direction, *m.SQLData); err != nil {
 		return err
 	}
 

@@ -2,8 +2,8 @@ package goose
 
 import (
 	"database/sql"
-	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -30,36 +30,28 @@ func Status(db *sql.DB, dir string) error {
 }
 
 func printMigrationStatus(db *sql.DB, migration *Migration) {
-	var row MigrationRecord
-	q := fmt.Sprintf("SELECT tstamp, filename, note, is_applied FROM %s WHERE version_id=%d ORDER BY tstamp DESC LIMIT 1", TableName(), migration.Version)
-	e := db.QueryRow(q).Scan(&row.TStamp, &row.FileName, &row.Note, &row.IsApplied)
-
-	if e != nil && e != sql.ErrNoRows {
-		log.Fatal(e)
-	}
-
 	var (
 		appliedAt string
-		filename  string
 		note      string
+		filename  string
 	)
 
-	if row.IsApplied {
-		appliedAt = row.TStamp.Format(time.ANSIC)
+	if migration.IsApplied {
+		appliedAt = migration.TStamp.Format(time.ANSIC)
 	} else {
 		appliedAt = "Pending"
 	}
 
-	if row.FileName != nil {
-		filename = *row.FileName
-	} else {
-		filename = filepath.Base(migration.Source)
-	}
-
-	if row.Note != nil && len(*row.Note) > 0 {
-		note = *row.Note
+	if migration.Note != nil && len(*migration.Note) > 0 {
+		note = *migration.Note
 	} else {
 		note = "-"
+	}
+
+	if strings.HasPrefix(migration.Source, "[!") {
+		filename = migration.Source
+	} else {
+		filename = filepath.Base(migration.Source)
 	}
 
 	log.Printf("    %-24s -- %v  (%v)\n", appliedAt, filename, note)

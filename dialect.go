@@ -49,20 +49,21 @@ type PostgresDialect struct{}
 
 func (pg PostgresDialect) createVersionTableSQL() string {
 	return fmt.Sprintf(`CREATE TABLE %s (
-            	id serial NOT NULL,
+            		id serial NOT NULL,
 								version_id bigint NOT NULL,
 								filename text NULL default NULL,
 								note text NULL default NULL,
                 is_applied boolean NOT NULL,
-                tstamp timestamp NULL default now(),
+								tstamp timestamp NULL default now(),
+								sqldata text NULL default NULL,
                 PRIMARY KEY(id)
             );`, TableName())
 }
 
 func (pg PostgresDialect) insertVersionSQL() string {
 	return fmt.Sprintf(`INSERT INTO %s 
-											(version_id, filename, note, is_applied) 
-											VALUES ($1, $2, $3, $4);`, TableName())
+											(version_id, filename, note, is_applied, sqldata) 
+											VALUES ($1, $2, $3, $4, $5);`, TableName())
 }
 
 func (pg PostgresDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
@@ -89,15 +90,16 @@ func (m MySQLDialect) createVersionTableSQL() string {
 								filename text NULL default NULL,
 								note text NULL default NULL,
                 is_applied boolean NOT NULL,
-                tstamp timestamp NULL default now(),
+								tstamp timestamp NULL default now(),
+								sqldata text NULL default NULL,
                 PRIMARY KEY(id)
             );`, TableName())
 }
 
 func (m MySQLDialect) insertVersionSQL() string {
 	return fmt.Sprintf(`INSERT INTO %s 
-											(version_id, filename, note, is_applied) 
-											VALUES (?, ?, ?, ?);`, TableName())
+											(version_id, filename, note, is_applied, sqldata) 
+											VALUES (?, ?, ?, ?, ?);`, TableName())
 }
 
 func (m MySQLDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
@@ -123,15 +125,16 @@ func (m Sqlite3Dialect) createVersionTableSQL() string {
 								version_id INTEGER NOT NULL,
 								filename TEXT NULL default NULL,
 								note TEXT NULL default NULL,
-                is_applied INTEGER NOT NULL,
-                tstamp TIMESTAMP DEFAULT (datetime('now'))
+								is_applied INTEGER NOT NULL,
+								tstamp TIMESTAMP DEFAULT (datetime('now')),
+								sqldata text NULL default NULL,
             );`, TableName())
 }
 
 func (m Sqlite3Dialect) insertVersionSQL() string {
 	return fmt.Sprintf(`INSERT INTO %s 
-											(version_id, filename, note is_applied) 
-											VALUES (?, ?, ?, ?);`, TableName())
+											(version_id, filename, note, is_applied, sqldata) 
+											VALUES (?, ?, ?, ?, ?);`, TableName())
 }
 
 func (m Sqlite3Dialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
@@ -158,15 +161,16 @@ func (rs RedshiftDialect) createVersionTableSQL() string {
 								filename text NULL default NULL,
 								note text NULL default NULL,
                 is_applied boolean NOT NULL,
-                tstamp timestamp NULL default sysdate,
+								tstamp timestamp NULL default sysdate,
+								sqldata text NULL default NULL,
                 PRIMARY KEY(id)
             );`, TableName())
 }
 
 func (rs RedshiftDialect) insertVersionSQL() string {
 	return fmt.Sprintf(`INSERT INTO %s 
-											(version_id, filename, note, is_applied) 
-											VALUES ($1, $2, $3, $4);`, TableName())
+											(version_id, filename, note, is_applied, sqldata) 
+											VALUES ($1, $2, $3, $4, $5);`, TableName())
 }
 
 func (rs RedshiftDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
@@ -193,15 +197,16 @@ func (m TiDBDialect) createVersionTableSQL() string {
 								filename text NULL default NULL,
 								note text NULL default NULL,
                 is_applied boolean NOT NULL,
-                tstamp timestamp NULL default now(),
+								tstamp timestamp NULL default now(),
+								sqldata text NULL default NULL,
                 PRIMARY KEY(id)
             );`, TableName())
 }
 
 func (m TiDBDialect) insertVersionSQL() string {
 	return fmt.Sprintf(`INSERT INTO %s 
-											(version_id, filename, note, is_applied) 
-											VALUES (?, ?, ?, ?);`, TableName())
+											(version_id, filename, note, is_applied, sqldata) 
+											VALUES (?, ?, ?, ?, ?);`, TableName())
 }
 
 func (m TiDBDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {

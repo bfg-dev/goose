@@ -195,8 +195,29 @@ func sortAndConnectMigrations(migrations Migrations) Migrations {
 	return migrations
 }
 
+func convertDBInfoToMigration(dm *MigrationRecord) *Migration {
+	var filename string
+
+	if dm.FileName == nil {
+		filename = "<nil>"
+	} else {
+		filename = fmt.Sprintf("[!DB info only!]:%s", *dm.FileName)
+	}
+
+	return &Migration{
+		TStamp:    dm.TStamp,
+		Version:   dm.VersionID,
+		Next:      -1,
+		Previous:  -1,
+		Source:    filename,
+		Note:      dm.Note,
+		SQLData:   dm.SQLData,
+		IsApplied: dm.IsApplied,
+	}
+}
+
 func addInfoFromDBToMigrations(db *sql.DB, migrations Migrations) Migrations {
-	rows, err := db.Query(fmt.Sprintf("SELECT version_id, note, filename, is_applied FROM %s ORDER by version_id, id;", TableName()))
+	rows, err := db.Query(fmt.Sprintf("SELECT tstamp, version_id, note, filename, is_applied, sqldata FROM %s ORDER by version_id, id;", TableName()))
 	if err != nil {
 		log.Fatal("error selecting from DB:", err)
 	}
@@ -207,19 +228,26 @@ func addInfoFromDBToMigrations(db *sql.DB, migrations Migrations) Migrations {
 		searchIndex int64
 	)
 	for rows.Next() {
-		if err = rows.Scan(&row.VersionID, &row.FileName, &row.Note, &row.IsApplied); err != nil {
+		if err = rows.Scan(&row.TStamp, &row.VersionID, &row.Note, &row.FileName, &row.IsApplied, &row.SQLData); err != nil {
 			log.Fatal("error scanning rows:", err)
 		}
 
-		for row.VersionID > migrations[searchIndex].Version && searchIndex < int64(len(migrations)-1) {
-			searchIndex++
-		}
+		if len(migrations) > 0 {
+			for searchIndex < int64(len(migrations)-1) && row.VersionID > migrations[searchIndex].Version {
+				searchIndex++
+			}
 
-		if row.VersionID == migrations[searchIndex].Version {
-			migrations[searchIndex].IsApplied = row.IsApplied
+			if row.VersionID == migrations[searchIndex].Version {
+				migrations[searchIndex].IsApplied = row.IsApplied
+				migrations[searchIndex].Note = row.Note
+				migrations[searchIndex].TStamp = row.TStamp
+			} else {
+				migrations = append(migrations, convertDBInfoToMigration(&row))
+			}
+		} else {
+			migrations = append(migrations, convertDBInfoToMigration(&row))
 		}
 	}
-
 	return migrations
 }
 
@@ -300,7 +328,7 @@ func createVersionTable(db *sql.DB) error {
 	version := 0
 	note := "Init"
 	applied := true
-	if _, err := txn.Exec(d.insertVersionSQL(), version, nil, note, applied); err != nil {
+	if _, err := txn.Exec(d.insertVersionSQL(), version, nil, note, applied, nil); err != nil {
 		txn.Rollback()
 		return err
 	}

@@ -81,9 +81,19 @@ func Run(command string, db *sql.DB, dir, note string, forceHoles bool, args ...
 			return err
 		}
 	case "upgrade":
-		if err := Upgrade(db, dir, note); err != nil {
+		var err, err2 error
+		err = Upgrade(db, dir, note)
+		err2 = Upgrade2(db, dir, note)
+		if err == nil && err2 == nil {
+			return nil
+		}
+		if err != nil && err2 == nil {
 			return err
 		}
+		if err == nil && err2 != nil {
+			return err2
+		}
+		return fmt.Errorf("Errors: %v and %v", err, err2)
 	default:
 		return fmt.Errorf("%q: no such command", command)
 	}

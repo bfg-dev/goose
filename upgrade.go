@@ -3,6 +3,7 @@ package goose
 import (
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 )
 
@@ -58,10 +59,58 @@ func Upgrade(db *sql.DB, dir, note string) error {
 		}
 
 		if row.VersionID == migrations[searchIndex].Version {
-			if _, err := tx.Exec(GetDialect().insertVersionSQL(), row.VersionID, filepath.Base(migrations[searchIndex].Source), note, row.IsApplied); err != nil {
+			sqldata, err := ioutil.ReadFile(migrations[searchIndex].Source)
+			if err != nil {
 				tx.Rollback()
 				return err
 			}
+			if _, err := tx.Exec(GetDialect().insertVersionSQL(), row.VersionID, filepath.Base(migrations[searchIndex].Source), note, row.IsApplied, string(sqldata)); err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	return tx.Commit()
+}
+
+// Upgrade2 migraion table
+func Upgrade2(db *sql.DB, dir, note string) error {
+	upgradetx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	_, err = upgradetx.Exec(fmt.Sprintf("ALTER TABLE \"%s\" ADD COLUMN sqldata TEXT DEFAULT NULL;", tableName))
+	if err != nil {
+		upgradetx.Rollback()
+	} else {
+		upgradetx.Commit()
+	}
+
+	// collect all migrations
+	migrations, err := CollectMigrations(db, dir, minVersion, maxVersion)
+	if err != nil {
+		return err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	for _, migration := range migrations {
+		if migration.Source == "<nil>" {
+			continue
+		}
+		sqldata, err := ioutil.ReadFile(migration.Source)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		if _, err := tx.Exec(fmt.Sprintf("UPDATE %s SET sqldata = $1 WHERE version_id = $2;", tableName), string(sqldata), migration.Version); err != nil {
+			tx.Rollback()
+			return err
 		}
 	}
 
