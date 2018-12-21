@@ -117,7 +117,7 @@ func AddNamedMigration(filename string, up func(*sql.Tx) error, down func(*sql.T
 
 // CollectMigrations returns all the valid looking migration scripts in the
 // migrations folder and go func registry, and key them by version.
-func CollectMigrations(db *sql.DB, dirpath string, current, target int64) (Migrations, error) {
+func CollectMigrations(db *sql.DB, dirpath string, current, target int64, forUp bool) (Migrations, error) {
 	if _, err := os.Stat(dirpath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("%s directory does not exists", dirpath)
 	}
@@ -173,7 +173,7 @@ func CollectMigrations(db *sql.DB, dirpath string, current, target int64) (Migra
 		}
 	}
 
-	migrations = addInfoFromDBToMigrations(db, sortAndConnectMigrations(migrations))
+	migrations = addInfoFromDBToMigrations(db, sortAndConnectMigrations(migrations), forUp)
 
 	return migrations, nil
 }
@@ -216,7 +216,7 @@ func convertDBInfoToMigration(dm *MigrationRecord) *Migration {
 	}
 }
 
-func addInfoFromDBToMigrations(db *sql.DB, migrations Migrations) Migrations {
+func addInfoFromDBToMigrations(db *sql.DB, migrations Migrations, forUp bool) Migrations {
 	rows, err := db.Query(fmt.Sprintf("SELECT tstamp, version_id, note, filename, is_applied, sqldata FROM %s ORDER by version_id, id;", TableName()))
 	if err != nil {
 		log.Fatal("error selecting from DB:", err)
@@ -242,10 +242,14 @@ func addInfoFromDBToMigrations(db *sql.DB, migrations Migrations) Migrations {
 				migrations[searchIndex].Note = row.Note
 				migrations[searchIndex].TStamp = row.TStamp
 			} else {
-				migrations = append(migrations, convertDBInfoToMigration(&row))
+				if !forUp {
+					migrations = append(migrations, convertDBInfoToMigration(&row))
+				}
 			}
 		} else {
-			migrations = append(migrations, convertDBInfoToMigration(&row))
+			if !forUp {
+				migrations = append(migrations, convertDBInfoToMigration(&row))
+			}
 		}
 	}
 	return migrations

@@ -11,7 +11,7 @@ func UpTo(db *sql.DB, dir, note string, version int64, forceHoles bool) error {
 	// Just create table if it does not exist
 	_, err := GetDBVersion(db)
 
-	migrations, err := CollectMigrations(db, dir, minVersion, version)
+	migrations, err := CollectMigrations(db, dir, minVersion, version, true)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func UpByOne(db *sql.DB, dir, note string) error {
 		return err
 	}
 
-	migrations, err := CollectMigrations(db, dir, minVersion, maxVersion)
+	migrations, err := CollectMigrations(db, dir, minVersion, maxVersion, true)
 	if err != nil {
 		return err
 	}
